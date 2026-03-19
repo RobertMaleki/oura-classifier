@@ -1,4 +1,5 @@
 from typing import Dict, List
+import re
 
 
 CATEGORY_KEYWORDS = [
@@ -107,12 +108,33 @@ PERSISTENT_UNRESOLVED_SIGNALS = [
 def _normalize_text(subject: str, body: str) -> str:
     return f"{subject} {body}".lower().strip()
 
-
 def _find_matches(text: str, signals: List[str]) -> List[str]:
-    return sorted({signal for signal in signals if signal in text})
+    matches = []
+
+    for signal in sorted(signals, key=len, reverse=True):
+        pattern = r"\b" + re.escape(signal) + r"\b"
+        if re.search(pattern, text):
+            # Skip shorter matches that are contained inside a longer one already matched
+            if not any(signal in existing for existing in matches):
+                matches.append(signal)
+
+    return sorted(matches)
 
 
 def should_escalate(subject: str, body: str) -> Dict:
+    """
+    Determine whether a battery/power-related support ticket should be
+    escalated from Finn to a human agent.
+
+    This lightweight, rule-based classifier mirrors the Task A escalation logic:
+    1. Confirm category match
+    2. Escalate immediately for safety signals
+    3. Escalate for hard failure after troubleshooting
+    4. Escalate for human request after a reasonable attempt
+    5. Escalate for persistent unresolved issues
+    6. Otherwise retain in Finn
+    """
+
     text = _normalize_text(subject, body)
 
     matched_category = _find_matches(text, CATEGORY_KEYWORDS)
@@ -187,7 +209,7 @@ def should_escalate(subject: str, body: str) -> Dict:
         "confidence": 0.70,
     }
 
-# TEMPORARY - sample cases to test
+#  Example test cases
 if __name__ == "__main__":
     samples = [
         {
@@ -204,6 +226,16 @@ if __name__ == "__main__":
             "name": "Retain in Finn",
             "subject": "Battery question",
             "body": "What can I do to improve battery life?",
+        },
+        {
+            "name": "Human request after reasonable attempt",
+            "subject": "Battery still draining quickly",
+            "body": "I already tried restarting it and updated the firmware. I need to talk to a human.",
+        },
+        {
+            "name": "Persistent unresolved issue",
+            "subject": "Same battery issue again",
+            "body": "My ring is still not working. This is the same issue again and nothing helped.",
         },
     ]
 
