@@ -186,3 +186,28 @@ def should_escalate(subject: str, body: str) -> Dict:
         "matched_signals": matched_signals,
         "confidence": 0.70,
     }
+
+# TEMPORARY - sample cases to test
+if __name__ == "__main__":
+    samples = [
+        {
+            "name": "Safety escalation",
+            "subject": "Ring overheating while charging",
+            "body": "My ring gets hot while charging and I’m worried it’s unsafe.",
+        },
+        {
+            "name": "Hard failure after troubleshooting",
+            "subject": "Ring won't charge",
+            "body": "I already tried another outlet and left it on the charger, but it still won't charge.",
+        },
+        {
+            "name": "Retain in Finn",
+            "subject": "Battery question",
+            "body": "What can I do to improve battery life?",
+        },
+    ]
+
+    for sample in samples:
+        result = should_escalate(sample["subject"], sample["body"])
+        print(f"\n--- {sample['name']} ---")
+        print(result)
